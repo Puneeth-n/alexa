@@ -20,6 +20,7 @@ import argparse
 import requests
 import os,sys
 import textwrap
+import re
 
 class FetchData():
     """ This class has various functions that can be used to fetch data from
@@ -59,10 +60,10 @@ class FetchData():
         if 'country' in self.args.category:
             self.url = self.url + "/countries/"
             if not self.args.sub_category:
-                print ('No country code provided. Printing country codes\n')
+                print ('No country code provided. Fetching country codes\n')
                 string = '/topsites/countries/'
                 soup = self.fetch_data(self.url)
-                for link in soup.find_all('a'):
+                for link in soup.find_all(re.compile('^a')):
                     if (link.get('href') is not None) and (string in link.get('href')):
                         print link.string + ' = ' + link.get('href').replace(string, '')
 
@@ -72,14 +73,13 @@ class FetchData():
         if 'category' in self.args.category:
             self.url = self.url + "/category/Top/"
             if not self.args.sub_category:
-                print ('No sub-category provided\n')
+                print ('No sub-category provided. Fetching categories\n')
                 string = '/topsites/category/Top/'
                 soup = self.fetch_data(self.url)
-                for link in soup.find_all('a'):
+                for link in soup.find_all(re.compile('^a')):
                     if (link.get('href') is not None) and (string in link.get('href')):
                         print link.get('href').replace(string, '')
 
-                exit(1)
                 exit(1)
             self.url = self.url + self.args.sub_category
 
@@ -89,7 +89,7 @@ class FetchData():
         return BeautifulSoup(data)
 
     def parse_data(self,soup,string):
-        for link in soup.find_all('a'):
+        for link in soup.find_all(re.compile('^a')):
             if (link.get('href') is not None) and (string in link.get('href')):
                 #print link.string
                 print (link.get('href')).replace(string, '')
