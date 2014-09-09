@@ -53,6 +53,9 @@ class FetchData():
         if 'top_sites' in self.args.category:
             pass
 
+        if 'all' in self.args.category:
+            raise NotImplementedError("To be implemented!")
+
         if 'country' in self.args.category:
             self.url = self.url + "/countries/"
             if not self.args.sub_category:
