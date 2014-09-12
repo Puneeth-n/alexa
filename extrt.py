@@ -3,8 +3,8 @@
 # vi:et:sw=4 ts=4
 # Copyright (C) 2014 Puneeth Nanjundaswamy <puneeth@netapp.com>
 #
-#CONFIGURATION SECTION
-url = 'www.alexa.com/topsites'
+# CONFIGURATION SECTION
+url = 'www.alexa.com'
 #
 #
 #
@@ -12,15 +12,15 @@ url = 'www.alexa.com/topsites'
 #
 #
 #
-#Beautifulsoup imports
+# Beautifulsoup imports
 from bs4 import BeautifulSoup
 
-#python imports
+# python imports
 import argparse
 import requests
-import os,sys
 import textwrap
 import re
+
 
 class FetchData():
     """ This class has various functions that can be used to fetch data from
@@ -33,14 +33,22 @@ class FetchData():
 
         self.parser = argparse.ArgumentParser(description=description)
 
-        self.parser.add_argument("-c", "--category", choices=['country','category','top_sites','all'],
-                                 required=True,metavar='CATEGORY',
+        self.parser.add_argument("-c", "--category", choices=['country',
+                                                              'category',
+                                                              'top_sites',
+                                                              'all'],
+                                 required=True, metavar='CATEGORY',
                                  action="store", help="%(choices)s")
 
-        self.parser.add_argument("-s", "--sub_category", metavar='SUB-CATEGORY',
-                                 action="store", help="Ex: country codes, Games,Arts, Business")
+        self.parser.add_argument("-s", "--sub_category",
+                                 metavar='SUB-CATEGORY', action="store",
+                                 help="Ex: country codes,\
+                                 Games, Arts, Business")
 
         self.url = url
+        self.resource = None
+        self.cc = False
+        self.regX = re.compile('^a')
 
     def parse_options(self, args=None):
         """Parse options for generic Application object"""
@@ -52,52 +60,61 @@ class FetchData():
         """Configure generic Application object based on the options from
         the argparser"""
         if 'top_sites' in self.args.category:
-            pass
+            return
 
         if 'all' in self.args.category:
             raise NotImplementedError("To be implemented!")
 
         if 'country' in self.args.category:
-            self.url = self.url + "/countries/"
-            if not self.args.sub_category:
-                print ('No country code provided. Fetching country codes\n')
-                string = '/topsites/countries/'
-                soup = self.fetch_data(self.url)
-                for link in soup.find_all(re.compile('^a')):
-                    if (link.get('href') is not None) and (string in link.get('href')):
-                        print link.string + ' = ' + link.get('href').replace(string, '')
-
+            self.resource = "/topsites/countries/"
+            if not self.args.sub_category or len(self.args.sub_category) != 2:
+                self.cc = True
+                print ('No/Invalid country code provided.\
+                       Fetching valid country codes\n')
+                soup = self.fetch_data(self.url+self.resource)
+                self.parse_data(soup, self.resource)
                 exit(1)
-            self.url = self.url + self.args.sub_category.upper()
+
+            self.args.sub_category = self.args.sub_category.upper()
 
         if 'category' in self.args.category:
-            self.url = self.url + "/category/Top/"
+            self.resource = "/topsites/category/Top/"
             if not self.args.sub_category:
                 print ('No sub-category provided. Fetching categories\n')
-                string = '/topsites/category/Top/'
-                soup = self.fetch_data(self.url)
-                for link in soup.find_all(re.compile('^a')):
-                    if (link.get('href') is not None) and (string in link.get('href')):
-                        print link.get('href').replace(string, '')
-
+                soup = self.fetch_data(self.url + self.resource)
+                self.parse_data(soup, self.resource)
                 exit(1)
-            self.url = self.url + self.args.sub_category
 
-    def fetch_data(self,url):
+        self.resource += self.args.sub_category
+
+    def fetch_data(self, url):
         r = requests.get("http://" + url)
         data = r.text
         return BeautifulSoup(data)
 
-    def parse_data(self,soup,string):
-        for link in soup.find_all(re.compile('^a')):
-            if (link.get('href') is not None) and (string in link.get('href')):
-                #print link.string
-                print (link.get('href')).replace(string, '')
+    def parse_data(self, soup, string):
+        if not self.cc:
+            for link in soup.find_all(self.regX):
+                if (link.get('href') is not None) and \
+                        (string in link.get('href')):
+                    print (link.get('href')).replace(string, '')
+        else:
+            for link in soup.find_all(self.regX):
+                if (link.get('href') is not None) and\
+                        (string in link.get('href')):
+                    print (link.string).strip() + ' = ' \
+                        + (link.get('href')).replace(string, '')
 
     def run(self):
-        soup = self.fetch_data(self.url)
-        self.parse_data(soup,'/siteinfo/')
+        while True:
+            soup = self.fetch_data(self.url + self.resource)
+            self.parse_data(soup, '/siteinfo/')
 
+            if not len(soup.find_all(title='Next')):
+                break
+
+            for link in soup.find_all(title='Next'):
+                self.resource = link.get('href')
 
     def main(self):
         self.parse_options()
