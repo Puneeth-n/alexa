@@ -60,12 +60,12 @@ class FetchData():
         """Configure generic Application object based on the options from
         the argparser"""
         if 'top_sites' in self.args.category:
-            return
+            self.resource = "/topsites/"
 
-        if 'all' in self.args.category:
+        elif 'all' in self.args.category:
             raise NotImplementedError("To be implemented!")
 
-        if 'country' in self.args.category:
+        elif 'country' in self.args.category:
             self.resource = "/topsites/countries/"
             if not self.args.sub_category or len(self.args.sub_category) != 2:
                 self.cc = True
@@ -76,8 +76,9 @@ class FetchData():
                 exit(1)
 
             self.args.sub_category = self.args.sub_category.upper()
+            self.resource += self.args.sub_category
 
-        if 'category' in self.args.category:
+        elif 'category' in self.args.category:
             self.resource = "/topsites/category/Top/"
             if not self.args.sub_category:
                 print ('No sub-category provided. Fetching categories\n')
@@ -85,7 +86,7 @@ class FetchData():
                 self.parse_data(soup, self.resource)
                 exit(1)
 
-        self.resource += self.args.sub_category
+            self.resource += self.args.sub_category
 
     def fetch_data(self, url):
         r = requests.get("http://" + url)
